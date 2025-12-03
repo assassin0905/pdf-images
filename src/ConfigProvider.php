@@ -11,7 +11,7 @@ declare(strict_types=1);
  */
 namespace Wudg\PdfImages;
 
-use Wudg\PdfImages\Engine\Engine;
+use Wudg\PdfImages\Engine\PdfImagesEngine;
 
 class ConfigProvider
 {
@@ -19,7 +19,7 @@ class ConfigProvider
     {
         return [
             'dependencies' => [
-                Engine::class => EngineFactory::class,
+                PdfImagesEngine::class => EngineFactory::class,
             ],
             'commands' => [
             ],
@@ -34,7 +34,8 @@ class ConfigProvider
                 [
                     'id' => 'config',
                     'description' => 'The config for pdf-images.',
-                    'source' => __DIR__ . '/../publish/logger.php',
+                    'source' => __DIR__ . '/../publish/pdf-images.php',
+                    'destination' => BASE_PATH . '/config/autoload/pdf-images.php',
                 ],
             ],
         ];

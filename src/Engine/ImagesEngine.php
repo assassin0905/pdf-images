@@ -13,8 +13,9 @@ use Hyperf\Coroutine\Coroutine;
 use Hyperf\Coroutine\Parallel;
 use Hyperf\Coroutine\Exception\ParallelExecutionException;
 use Wudg\PdfImages\Exception\PdfImagesException;
+use Wudg\PdfImages\Interface\HandleInterface;
 
-class ImagickEngine extends Engine
+class ImagesEngine extends PdfImagesEngine implements HandleInterface
 {
 
     /**
@@ -68,7 +69,7 @@ class ImagickEngine extends Engine
     protected string $pdf_save_path = 'cache/pdf/';
 
 
-    public function __construct(array $config)
+    public function __construct(array $config = [])
     {
         if(empty(Imagick::queryFormats('PDF')))
         {
@@ -109,7 +110,7 @@ class ImagickEngine extends Engine
         {
             $this->images_save_path = $savePath;
         }else{
-            $this->images_save_path = BASE_PATH.DIRECTORY_SEPARATOR.$this->config['save_img_path'];
+            $this->images_save_path = $this->config['save_img_path'];
         }
         $this->images_save_path = rtrim($this->images_save_path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
@@ -330,7 +331,7 @@ class ImagickEngine extends Engine
         {
             $this->pdf_save_path = $savePath;
         }else{
-            $this->pdf_save_path = BASE_PATH.DIRECTORY_SEPARATOR.$this->config['save_pdf_path'];
+            $this->pdf_save_path = $this->config['save_pdf_path'];
         }
         $this->pdf_save_path = rtrim($this->pdf_save_path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 

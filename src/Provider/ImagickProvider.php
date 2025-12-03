@@ -10,8 +10,8 @@ namespace Wudg\PdfImages\Provider;
 
 use Hyperf\Contract\ConfigInterface;
 use Psr\Container\ContainerInterface;
-use Wudg\PdfImages\Engine\Engine;
-use Wudg\PdfImages\Engine\ImagickEngine;
+use Wudg\PdfImages\Engine\PdfImagesEngine;
+use Wudg\PdfImages\Engine\ImagesEngine;
 
 class ImagickProvider implements ProviderInterface
 {
@@ -20,14 +20,15 @@ class ImagickProvider implements ProviderInterface
     {
     }
 
-    public function make(string $name): Engine
+    public function make(string $name): PdfImagesEngine
     {
-        $config = $this->container->get(ConfigInterface::class);
+        $config = $this->container->get(ConfigInterface::class)->get('pdf-images');
+
         $config = array_merge([
-            'has_pdfinfo' => $config['has_pdfinfo'],
             'save_img_path' => $config['save_img_path'],
             'save_pdf_path' => $config['save_pdf_path'],
-        ],$config['pdf_images']);
-        return new ImagickEngine($config);
+        ],$config['engine'][$name] ?? []);
+
+        return new ImagesEngine($config);
     }
 }

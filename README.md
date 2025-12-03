@@ -32,11 +32,32 @@ brew install ghostscript
 ## 使用
 此插件支持在 hyperf 框架下运行 也可以脱离hyperf 框架使用，测试环境为 hyperf 3.1.10, 非 hyperf 框架会安装 "hyperf/contract","hyperf/support" 两个组件
 
-### 在 hyperf 框架下 使用
+### 在 hyperf 框架下使用
+#### 注解模式
 ```
+<?php
+/**
+ * Notes:
+ * User: wudg <544038230@qq.com>
+ * Date: 2025/12/03 16:57
+ */
 
+namespace App\Controller;
+use Wudg\PdfImages\Engine\PdfImagesEngine;
+use Hyperf\Di\Annotation\Inject;
 
+class TestController extends AbstractController 
+{
+    #[Inject]
+    private PdfImagesEngine $pdfImage;
 
+    public function testPdfToImg() 
+    {
+        $pdfPath = BASE_PATH.'/test.pdf';
+        $images = $this->pdfImage->pdfToImages($pdfPath);
+        print_r($images);
+    }
+}
 ```
 
 

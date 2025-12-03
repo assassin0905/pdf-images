@@ -2,7 +2,7 @@
 
 namespace Wudg\PdfImages\Engine;
 ! defined('BASE_PATH') && define('BASE_PATH', dirname(__DIR__, 1));
-abstract class Engine
+abstract class PdfImagesEngine
 {
 
 
