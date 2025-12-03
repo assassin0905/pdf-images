@@ -51,6 +51,10 @@ brew install poppler
 此插件支持在 hyperf 框架下运行 也可以脱离hyperf 框架使用，测试环境为 hyperf 3.1.10, 非 hyperf 框架会安装 "hyperf/contract","hyperf/support" 两个组件
 
 ### 在 hyperf 框架下使用
+```
+# 发布配置文件
+php bin/hyperf.php vendor:publish wudg/pdf-images
+```
 #### 注解模式
 ```
 <?php
