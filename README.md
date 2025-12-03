@@ -20,6 +20,24 @@ sudo yum install -y ghostscript
 # MacOS
 brew install ghostscript
 ```
+
+### 安装 pdfinfo (非必须，安装后会对处理多页 pdf 文件占用大量内存有优化)
+```
+# Ubuntu / Debian
+sudo apt-get install poppler-utils
+
+# CentOS / Rocky / Alma
+sudo yum install poppler-utils
+
+# Alpine
+apk add poppler-utils
+
+# MacOS
+brew install poppler
+
+```
+
+
 ## 参数配置说明
 - `save_img_path`: 生成的图片保存路径,绝对路径
 - `save_pdf_path`: 生成的pdf文件保存路径,绝对路径
@@ -93,21 +111,6 @@ print_r($pdfPath);
 
 ```
 
-### 安装 pdfinfo (非必须，安装后会对处理多页 pdf 文件占用大量内存有优化)
-```
-# Ubuntu / Debian
-sudo apt-get install poppler-utils
-
-# CentOS / Rocky / Alma
-sudo yum install poppler-utils
-
-# Alpine
-apk add poppler-utils
-
-# MacOS
-brew install poppler
-
-```
 
 
 
