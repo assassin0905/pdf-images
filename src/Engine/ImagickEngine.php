@@ -394,6 +394,16 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
         return $this;
     }
 
+
+    /**
+     * 返回处理后的imagick对象
+     * @return Imagick
+     */
+    public function getIm():Imagick
+    {
+        return $this->im;
+    }
+
     /**
      * 添加文字
      * @param string $text
@@ -454,16 +464,141 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
     }
 
     /**
+     * 图片合成 gif
+     * @param array $images
+     * @param int $delay
+     * @param string|null $transition fade|rotate
+     * @param int $transitionSteps
+     * @return $this
+     */
+    public function imagesToGif(array $images, int $delay = 20, string $transition = null, int $transitionSteps = 10): self
+    {
+        try {
+            $this->im = new Imagick();
+            $this->im->setResourceLimit(Imagick::RESOURCETYPE_MAP, 256*2048*2048); //内存限制
+            $this->im->setResourceLimit(Imagick::RESOURCETYPE_MEMORY, 256*2048*2048); //内存映射限制
+            $this->im->setResourceLimit(Imagick::RESOURCETYPE_THREAD, 10); //线程数量
+            $this->im->setFormat('gif');
+            $previousImage = null;
+            foreach ($images as $index => $frameFile) {
+                if (!file_exists($frameFile)) continue;
+                $currentImage = new Imagick($frameFile);
+                $currentImage->setImageDelay($delay);
+                if ($index > 0 && $transition && $previousImage) {
+                    $this->imageTransition($previousImage, $currentImage, $transition, $transitionSteps);
+                }
+                $this->im->addImage($currentImage);
+                $previousImage =clone $currentImage;
+                $currentImage->clear();
+                $currentImage->destroy();
+            }
+            $this->im->setImageFormat('gif');
+            return $this;
+        } catch (ImagickException $e) {
+            throw new PdfImagesException($e->getMessage());
+        }
+    }
+
+    /**
+     * 图片转场效果
+     * @param $previousImage
+     * @param $currentImage
+     * @param $transition
+     * @param $transitionSteps
+     * @return void
+     * @throws ImagickException
+     */
+    protected function imageTransition(Imagick $previousImage,Imagick &$currentImage,string $transition, int $transitionSteps)
+    {
+        // 统一尺寸，避免转场错位
+        $w = $previousImage->getImageWidth();
+        $h = $previousImage->getImageHeight();
+        if ($currentImage->getImageWidth() != $w || $currentImage->getImageHeight() != $h) {
+            $currentImage->scaleImage($w, $h);
+        }
+        $parallel = null;
+        if(Coroutine::inCoroutine())
+        {
+            $parallel = new Parallel($this->maxParallel);
+
+        }
+        for ($i = 1; $i <= $transitionSteps; $i++) {
+            $progress = $i / ($transitionSteps + 1);
+            $frame = clone $previousImage;
+            $overlay = clone $currentImage;
+            if($parallel)
+            {
+                $parallel->add(function()use($transition,$progress,$frame,$overlay,$w,$h){
+
+                    return $this->handleTransition($transition,$overlay,$progress,$frame,$w,$h);
+                });
+            }else{
+                $frame = $this->handleTransition($transition,$overlay,$progress,$frame,$w,$h);
+                $this->im->addImage($frame);
+                $frame->clear();
+                $frame->destroy();
+            }
+        }
+        if($parallel)
+        {
+            try{
+                $processImages = $parallel->wait();
+                foreach($processImages as $image)
+                {
+                    $this->im->addImage($image);
+                    $image->clear();
+                    $image->destroy();
+                }
+            } catch(ParallelExecutionException $e){
+                throw new PdfImagesException($e->getMessage());
+            }
+        }
+    }
+
+    protected function handleTransition(string $transition,Imagick $overlay, float $progress,Imagick $frame,$w=null,$h=null)
+    {
+        switch ($transition)
+        {
+            case "fade":
+                if (method_exists($overlay, 'setImageAlpha')) {
+                    $overlay->setImageAlpha($progress);
+                } else{
+                    $overlay->evaluateImage(Imagick::EVALUATE_MULTIPLY, $progress, Imagick::CHANNEL_ALPHA);
+                }
+                $frame->compositeImage($overlay, Imagick::COMPOSITE_BLEND, 0, 0);
+                break;
+            case "rotate":
+                $angle = 360 * (1 - $progress); // 从360度转到0度
+                // 缩放和旋转
+                $overlay->scaleImage((int)($w * $progress), (int)($h * $progress));
+                $overlay->rotateImage(new ImagickPixel('transparent'), $angle);
+                // 居中合成
+                $ox = ($w - $overlay->getImageWidth()) / 2;
+                $oy = ($h - $overlay->getImageHeight()) / 2;
+                $frame->compositeImage($overlay, Imagick::COMPOSITE_OVER, (int)$ox, (int)$oy);
+                break;
+        }
+        $frame->setImageDelay(5);
+        $overlay->clear();
+        return $frame;
+    }
+
+    /**
      * 返回二进制流
      * @return string
      */
     public function toBlod()
     {
         if(empty($this->im)) throw new PdfImagesException("请先调用 openImage() 加载图片");
-        $blod = $this->im->getImageBlob();
+        // 对于多帧图像（如 GIF），使用 getImagesBlob
+        if ($this->im->getNumberImages() > 1) {
+            $blob = $this->im->getImagesBlob();
+        } else {
+            $blob = $this->im->getImageBlob();
+        }
         $this->im->clear();
         $this->im->destroy();
-        return $blod;
+        return $blob;
     }
 
     /**
@@ -481,14 +616,19 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
         }
         $imgExt = $this->ext;
         if(!empty($ext)) $imgExt= $ext;
-        $page = $this->im->getImage();
-        $page->setImageFormat($imgExt);
+        
+        // 修复：不再使用 getImage() 取单帧，而是直接操作 $this->im
+        $this->im->setImageFormat($imgExt);
         $newPath = $dir . 'out_'.Str::uuid()->toString().'.'.$imgExt;
 
-        $res = $page->writeImage($newPath);
+        if ($this->im->getNumberImages() > 1) {
+
+            $res = $this->im->writeImages($newPath, true);
+        } else {
+            $res = $this->im->writeImage($newPath);
+        }
         $this->im->clear();
         $this->im->destroy();
-        unset($page);
         if(!$res)
         {
             throw new PdfImagesException("生成失败");
@@ -727,5 +867,105 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
             'right_down' => Imagick::GRAVITY_SOUTHEAST,
         ];
         return $map[$position] ?? Imagick::GRAVITY_CENTER;
+    }
+
+    /**
+     * 图片拼接
+     * @param array $images 图片路径数组
+     * @param int $spacing 间距
+     * @param string $direction vertical|v|horizontal|h 拼接方向
+     * @param string $background_color 背景颜色
+     * @return $this
+     * @throws PdfImagesException
+     */
+    public function combineImages(array $images, string $direction = 'v', int $spacing = 0, string $background_color = 'white'): self
+    {
+        if (empty($images)) {
+            throw new PdfImagesException("图片数组不能为空");
+        }
+        try {
+            $imgObjects = [];
+            $totalWidth = 0;
+            $totalHeight = 0;
+            $maxWidth = 0;
+            $maxHeight = 0;
+
+            // 预加载所有图片并计算尺寸
+            foreach ($images as $file) {
+                if (!file_exists($file)) continue;
+                $img = new Imagick($file);
+                $w = $img->getImageWidth();
+                $h = $img->getImageHeight();
+                
+                $imgObjects[] = [
+                    'obj' => $img,
+                    'w' => $w,
+                    'h' => $h
+                ];
+                if ($w > $maxWidth) $maxWidth = $w;
+                if ($h > $maxHeight) $maxHeight = $h;
+                
+                $totalWidth += $w;
+                $totalHeight += $h;
+            }
+            if (empty($imgObjects)) {
+                throw new PdfImagesException("没有有效的图片可供拼接");
+            }
+            $count = count($imgObjects);
+            $totalSpacing = ($count - 1) * $spacing;
+            if ($totalSpacing < 0) $totalSpacing = 0;
+            switch ($direction)
+            {
+                case 'vertical':
+                case 'v':
+                    $canvasWidth = $maxWidth;
+                    $canvasHeight = $totalHeight + $totalSpacing;
+                    break;
+                case 'horizontal':
+                case 'h':
+                default:
+                    $canvasWidth = $totalWidth + $totalSpacing;
+                    $canvasHeight = $maxHeight;
+                    break;
+            }
+            // 创建画布
+            $canvas = new Imagick();
+            $canvas->newImage($canvasWidth, $canvasHeight, new ImagickPixel($background_color));
+            // 尝试继承第一张图片的格式，默认 jpg
+            $format = 'jpg';
+            if (isset($imgObjects[0]['obj'])) {
+                try {
+                    $format = $imgObjects[0]['obj']->getImageFormat();
+                } catch (\Throwable $e) {}
+            }
+            $canvas->setImageFormat($format);
+            // 拼接
+            $currentX = 0;
+            $currentY = 0;
+            foreach ($imgObjects as $item) {
+                /** @var Imagick $img */
+                $img = $item['obj'];
+                $w = $item['w'];
+                $h = $item['h'];
+
+                if ($direction === 'horizontal' || $direction === 'h') {
+                     // 水平拼接，垂直居中
+                    $y = ($canvasHeight - $h) / 2;
+                    $canvas->compositeImage($img, Imagick::COMPOSITE_DEFAULT, $currentX, (int)$y);
+                    $currentX += $w + $spacing;
+                } else {
+                    // 垂直拼接，水平居中
+                    $x = ($canvasWidth - $w) / 2;
+                    $canvas->compositeImage($img, Imagick::COMPOSITE_DEFAULT, (int)$x, $currentY);
+                    $currentY += $h + $spacing;
+                }
+                $img->clear();
+                $img->destroy();
+            }
+            $this->im = $canvas;
+            return $this;
+        } catch (ImagickException $e) {
+            throw new PdfImagesException($e->getMessage());
+        }
     }
 }

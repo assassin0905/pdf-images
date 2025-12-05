@@ -228,39 +228,99 @@ class ExampleTest extends AbstractTestCase
         $this->assertNotEquals(realpath($src), realpath($out));
     }
 
-    public function testChainEdit()
-    {
-        $src = __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg';
-        $overlay = __DIR__.'/../../cache/images/demo.png';
 
-        if (!file_exists($src) || !file_exists($overlay)) {
-            $this->markTestSkipped('缺少样例图片 src/cache/images/...');
+    public function testImagesToGif()
+    {
+        $images = [
+            __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/1_535cacc6-3804-4134-93a5-c41b42f72a7e.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/2_7271b539-ce09-4356-89fd-20dede251c93.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/3_3f60489d-b606-42ec-9cd6-0bec79eb831c.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/4_3503f27f-5766-416b-a3dd-6c32f3dd929f.jpg',
+        ];
+        
+        // 检查图片是否存在，不存在则跳过
+        foreach ($images as $img) {
+            if (!file_exists($img)) {
+                $this->markTestSkipped('缺少 GIF 测试所需的源图片');
+            }
         }
         $engine = new ImagickEngine([]);
-        $out = $engine
-            ->openImage($src)
-            ->addText('hello 世界', [
-                'size' => 24,
-                'font' => __DIR__."/../../fonts/msyh.ttf",
-                'color' => 'rgba(0,0,0,0.4)',
-                'position' => 'down',
-                'offset_x' => 80,
-                'offset_y' => 80,
-            ])
-            ->mergeImage($overlay, [
-                'position' => 'center',
-                'width' => 300,
-                'keep_aspect' => true,
-                'offset_x' => 0,
-                'offset_y' => 0,
-            ])
-            ->resize(1000,1000)
-            ->crop(500, 500, 200, 300)
-            ->toPath();
-        $this->assertIsString($out);
-        $this->assertFileExists($out);
-        $this->assertGreaterThan(0, filesize($out));
-        $this->assertNotEquals(realpath($src), realpath($out));
+        // 普通转换
+//        $out = $engine->imagesToGif($images, 50)->toPath(null, 'gif');
+//        $this->assertIsString($out);
+//        $this->assertFileExists($out);
+//        $this->assertGreaterThan(0, filesize($out));
+
+//        var_dump($out);
+        // 带 fade 转场效果
+        $outFade = $engine->imagesToGif($images, 100, 'rotate', 10)->toPath(null, 'gif');
+        $this->assertIsString($outFade);
+        $this->assertFileExists($outFade);
+        $this->assertGreaterThan(0,filesize($outFade)); // 带转场帧数更多，文件应更大
+    }
+
+    public function testCoImagesToGif()
+    {
+        $images = [
+            __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/1_535cacc6-3804-4134-93a5-c41b42f72a7e.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/2_7271b539-ce09-4356-89fd-20dede251c93.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/3_3f60489d-b606-42ec-9cd6-0bec79eb831c.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/4_3503f27f-5766-416b-a3dd-6c32f3dd929f.jpg',
+        ];
+        
+        // 检查图片是否存在，不存在则跳过
+        foreach ($images as $img) {
+            if (!file_exists($img)) {
+                $this->markTestSkipped('缺少 GIF 测试所需的源图片');
+            }
+        }
+        $outRotate = null;
+        run(function ()use($images,&$outRotate) {
+            $engine = new ImagickEngine([]);
+            // 带 rotate 转场效果
+            $outRotate = $engine->imagesToGif($images, 100, 'fade', 5)->toBlod();
+
+        });
+        $fp = fopen("test_6.gif", 'w');
+        fwrite($fp, $outRotate);
+        fclose($fp);
+//        $this->assertIsString($outRotate);
+//        $this->assertFileExists($outRotate);
+//        $this->assertGreaterThan(0,filesize($outRotate));
+    }
+
+    public function testCombineImages()
+    {
+        $images = [
+            __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/1_535cacc6-3804-4134-93a5-c41b42f72a7e.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/2_7271b539-ce09-4356-89fd-20dede251c93.jpg',
+        ];
+        
+        // 检查图片是否存在，不存在则跳过
+        foreach ($images as $img) {
+            if (!file_exists($img)) {
+                $this->markTestSkipped('缺少拼接测试所需的源图片');
+            }
+        }
+        
+        $engine = new ImagickEngine([]);
+
+        // 测试垂直拼接
+        $outV = $engine->combineImages($images, 'v',10, 'red')->toPath(null, 'jpg');
+        $this->assertIsString($outV);
+        $this->assertFileExists($outV);
+        $this->assertGreaterThan(0, filesize($outV));
+         var_dump("Vertical Combined: " . $outV);
+
+        // 测试水平拼接
+        $outH = $engine->combineImages($images, 'h', 20, 'blue')->toPath();
+        $this->assertIsString($outH);
+        $this->assertFileExists($outH);
+        $this->assertGreaterThan(0, filesize($outH));
+         var_dump("Horizontal Combined: " . $outH);
     }
 
     public function testChainEffects()

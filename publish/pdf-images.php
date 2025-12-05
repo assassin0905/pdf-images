@@ -5,6 +5,7 @@ return [
     'default' => env('PDF_ENGINE', 'imagick'),
     'save_img_path' => BASE_PATH.'/storage/images/'.date("y/md"), //生成的图片保存路径,相对根目录
     'save_pdf_path' => BASE_PATH.'/storage/pdf/'.date("y/md"), //生成的pdf保存路径,相对根目录
+    'parallel_num' => 5, //最大携程数量,仅在 hyperf 框架下有效
     'engine' => [
         'imagick' => [
             'driver' => ImagickProvider::class,

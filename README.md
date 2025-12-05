@@ -249,12 +249,48 @@ foreach ($pointData as $text)
 }
 $out = $source->toPath();
 
-# 实测效果，上面向单张图片9个方位 添加了文字，并保存为图片耗时如下
-# ./vendor/bin/phpunit -c phpunit.xml --filter 'HyperfTest\\Cases\\ExampleTest::testMoreText'
-# Runtime:       PHP 8.3.19
-# Time: 00:00.336, Memory: 10.00 MB
+```
+### 图片合成 gif 带转场效果
+```
+$images = [
+    __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/1_535cacc6-3804-4134-93a5-c41b42f72a7e.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/2_7271b539-ce09-4356-89fd-20dede251c93.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/3_3f60489d-b606-42ec-9cd6-0bec79eb831c.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/4_3503f27f-5766-416b-a3dd-6c32f3dd929f.jpg',
+];
+
+$engine = new ImagickEngine([]);
+
+/**
+ *
+ * $images      : 图片数组
+ * $duration    : 帧间隔时间,50 表示 0.5s 
+ * $transition  : 转场效果，可选值 rotate：旋转 | fade：渐变
+ * $transition_duration : 转场帧数，默认 10,transition 有值才生效,建议 10以内，越大耗时越长，生成的 gif 图片越大
+ */
+$outRotate = $engine->imagesToGif($images, 50, 'rotate', 5)->toPath(null, 'gif');
+```
+### 图片拼接
+```
+$images = [
+    __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/1_535cacc6-3804-4134-93a5-c41b42f72a7e.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/2_7271b539-ce09-4356-89fd-20dede251c93.jpg',
+];
+$engine = new ImagickEngine([]);
+/**
+ *
+ * $images      : 图片数组
+ * $direction   : 拼接方向 ，可选值 h|horizontal(水平) 或 vertical|v(垂直)
+ * $spacing     : 拼接间隙，默认 0，无间隙
+ * $background_color : 间隙背景色，默认 white
+ */
+$engine->combineImages($images, 'h', 20, 'blue')->toPath();
 
 ```
+
+
 
 ## 实际效果
 ### 测试 5 页 pdf 转换图片fpm和携程下差距
@@ -286,4 +322,20 @@ $out = $source->toPath();
 ### 测试处理图片，文字水印 & 合并图片 & 缩放图片 & 裁剪图片 最终保存
 # Time: 00:00.308, Memory: 10.00 MB
 ./vendor/bin/phpunit -c phpunit.xml --filter 'HyperfTest\\Cases\\ExampleTest::testChainEdit'
+
+# 实测效果，上面向单张图片9个方位 添加了文字，并保存为图片耗时如下
+# ./vendor/bin/phpunit -c phpunit.xml --filter 'HyperfTest\\Cases\\ExampleTest::testMoreText'
+# Runtime:       PHP 8.3.19
+# Time: 00:00.336, Memory: 10.00 MB
+```
+### 图片合成 gif 动图
+```
+## co 模式下 5张图片合成gif动图，带旋转转场效果,实测耗时与 fpm 在 toPath() 生成文件耗时无差异，在生成二进制流时在 co 模式下效果更好，5张图带转场效果 co 模式下快 6 秒
+# Time: 00:20.911, Memory: 17.91 MB
+./vendor/bin/phpunit -c phpunit.xml --filter 'HyperfTest\\Cases\\ExampleTest::testCoImagesToGif'
+
+
+# Time: 00:26.889, Memory: 10.00 MB
+./vendor/bin/phpunit -c phpunit.xml --filter 'HyperfTest\\Cases\\ExampleTest::testImagesToGif'
+
 ```

@@ -25,8 +25,9 @@ class ImagickProvider implements ProviderInterface
         $config = $this->container->get(ConfigInterface::class)->get('pdf-images');
 
         $config = array_merge([
-            'save_img_path' => $config['save_img_path'],
-            'save_pdf_path' => $config['save_pdf_path'],
+            'save_img_path' => $config['save_img_path'] ?? null,
+            'save_pdf_path' => $config['save_pdf_path'] ?? null,
+            'parallel_num' => $config['parallel_num'] ?? 5,
         ],$config['engine'][$name] ?? []);
 
         return new ImagickEngine($config);
