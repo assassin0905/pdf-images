@@ -20,7 +20,24 @@ sudo yum install -y ghostscript
 # MacOS
 brew install ghostscript
 ```
+### 安装 imagick扩展
+* **install detail**       http://blog.sixtymore.cn/archives/8/
 
+```
+# Alpine 
+## 安装imagemagick
+apk --update add imagemagick imagemagick-dev
+## 安装依赖
+apk add jpeg-dev libpng-dev freetype-dev imagemagick-dev
+
+# 安装扩展
+pecl install imagick
+# 配置信息
+cd /usr/local/etc/php/conf.d
+vi docker-php-ext-imagick.ini
+extension=imagick.so
+
+```
 ### 安装 pdfinfo (非必须，安装后会对处理多页 pdf 文件占用大量内存有优化)
 ```
 # Ubuntu / Debian
@@ -176,7 +193,7 @@ $engine->openImage($demoImg) //打开资源图片
     'offset_y' => 10,
 ])
  /**
-  * 合并裁剪
+  * 裁剪
   * width      :  裁剪宽度
   * height     :  裁剪高度
   * x          :  x轴偏移量,相对于图片左上角位置
@@ -188,7 +205,7 @@ $engine->openImage($demoImg) //打开资源图片
 //->toBlod() //返回二进制
 
 ```
-### 你也可以一次打点多个文本到同一张图片中，想怎么来怎么来
+### 你也可以一次打点多个文本到同一张图片中，想怎么来就怎么来
 ```
 $src = __DIR__.'/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg';
 $engine = new ImagickEngine();
