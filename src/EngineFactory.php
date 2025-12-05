@@ -10,7 +10,7 @@ namespace Wudg\PdfImages;
 
 use Hyperf\Contract\ConfigInterface;
 use Psr\Container\ContainerInterface;
-use Wudg\PdfImages\Engine\ImagesEngine;
+use Wudg\PdfImages\Engine\ImagickEngine;
 use Wudg\PdfImages\Provider\ProviderInterface;
 use function Hyperf\Support\make;
 
@@ -20,7 +20,7 @@ class EngineFactory
     {
         $config = $container->get(ConfigInterface::class);
         $name = $config->get('pdf-images.default', 'default');
-        $driver = $config->get("pdf-images.engine.{$name}.driver", ImagesEngine::class);
+        $driver = $config->get("pdf-images.engine.{$name}.driver", ImagickEngine::class);
         $driverInstance = make($driver);
         if ($driverInstance instanceof ProviderInterface) {
             return $driverInstance->make($name);

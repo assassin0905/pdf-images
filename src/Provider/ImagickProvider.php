@@ -11,7 +11,7 @@ namespace Wudg\PdfImages\Provider;
 use Hyperf\Contract\ConfigInterface;
 use Psr\Container\ContainerInterface;
 use Wudg\PdfImages\Engine\PdfImagesEngine;
-use Wudg\PdfImages\Engine\ImagesEngine;
+use Wudg\PdfImages\Engine\ImagickEngine;
 
 class ImagickProvider implements ProviderInterface
 {
@@ -29,6 +29,6 @@ class ImagickProvider implements ProviderInterface
             'save_pdf_path' => $config['save_pdf_path'],
         ],$config['engine'][$name] ?? []);
 
-        return new ImagesEngine($config);
+        return new ImagickEngine($config);
     }
 }

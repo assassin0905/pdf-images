@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace HyperfTest\Cases;
 
-use Wudg\PdfImages\Engine\ImagesEngine;
+use Wudg\PdfImages\Engine\ImagickEngine;
 use function Swoole\Coroutine\run;
 /**
  * @internal
@@ -27,7 +27,7 @@ class ExampleTest extends AbstractTestCase
 
     public function testPdfNum()
     {
-        $engine = new ImagesEngine([]);
+        $engine = new ImagickEngine([]);
         $pdf = __DIR__ . '/../../test.pdf';
 
         if (!file_exists($pdf)) {
@@ -54,7 +54,7 @@ class ExampleTest extends AbstractTestCase
         ];
 
         run(function () use ($config) {
-            $engine = new ImagesEngine($config);
+            $engine = new ImagickEngine($config);
             $pdfPath = $engine->imagesToPdf([
                 __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg',
                 __DIR__.'/../../src/cache/images/2025/1203/1_535cacc6-3804-4134-93a5-c41b42f72a7e.jpg',
@@ -80,7 +80,7 @@ class ExampleTest extends AbstractTestCase
             'compression_quality' => 100,
             'ext' => 'jpeg',
         ];
-        $engine = new ImagesEngine($config);
+        $engine = new ImagickEngine($config);
 
         $pdfPath = $engine->imagesToPdf([
             __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg',
@@ -120,7 +120,7 @@ class ExampleTest extends AbstractTestCase
             if (!file_exists($pdf)) {
                 $this->markTestSkipped('缺少测试 PDF 文件 tests/test.pdf');
             }
-            $engine = new ImagesEngine($config);
+            $engine = new ImagickEngine($config);
             $images = $engine->pdfToImages($pdf);
             $this->assertIsArray($images);
             $this->assertNotEmpty($images);
@@ -150,7 +150,7 @@ class ExampleTest extends AbstractTestCase
         if (!file_exists($pdf)) {
             $this->markTestSkipped('缺少测试 PDF 文件 tests/test.pdf');
         }
-        $engine = new ImagesEngine($config);
+        $engine = new ImagickEngine($config);
         $images = $engine->pdfToImages($pdf);
         $this->assertIsArray($images);
         $this->assertNotEmpty($images);
@@ -160,5 +160,107 @@ class ExampleTest extends AbstractTestCase
             $this->assertGreaterThan(0, filesize($img));
         }
 
+    }
+
+    public function testWatermarkText()
+    {
+        $engine = new ImagickEngine([
+            'save_img_path' => __DIR__.'/../../src/cache/images/'.date('Y/md/'),
+            'save_pdf_path' => __DIR__.'/../../src/cache/pdf/'.date('Y/md/'),
+            'dpi' => 300,
+            'width' => 1191,
+            'compression_quality' => 100,
+            'ext' => 'jpeg',
+        ]);
+
+        $src = __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg';
+        if (!file_exists($src)) {
+            $this->markTestSkipped('缺少样例图片 src/cache/images/...');
+        }
+
+        $dst = $engine->watermarkText($src, 'hello world 好！', [
+            'size' => 36, // 字体大小
+            'color' => 'rgba(255,0,0,0.5)', // 颜色
+            'angle' => 0, // 旋转角度
+            'position' => 'center', // 位置
+            'offset_x' => 20, // 偏移 X
+            'offset_y' => 20, // 偏移 Y
+        ], dirname($src));
+        $this->assertIsString($dst);
+        $this->assertFileExists($dst);
+        $this->assertGreaterThan(0, filesize($dst));
+        $this->assertNotEquals(realpath($src), realpath($dst));
+    }
+
+
+    public function testMoreText()
+    {
+        $src = __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg';
+        $overlay = __DIR__.'/../../cache/images/demo.png';
+
+        if (!file_exists($src) || !file_exists($overlay)) {
+            $this->markTestSkipped('缺少样例图片 src/cache/images/...');
+        }
+        $engine = new ImagickEngine();
+        $source = $engine->openImage($src);
+        $pointData = [
+            ['text'=>'左上','option'=>['position'=>'left_top', 'offset_x' => 0, 'offset_y' => 0,'color' => 'rgba(255,0,0,0.4)']],
+            ['text'=>'上中','option'=>['position'=>'top', 'offset_x' => 0, 'offset_y' => 0,'color' => 'rgba(255,0,0,0.4)']],
+            ['text'=>'右上','option'=>['position'=>'right_top', 'offset_x' => 0, 'offset_y' => 0,'color' => 'rgba(255,0,0,0.4)']],
+            ['text'=>'左中','option'=>['position'=>'left_center', 'offset_x' => 0, 'offset_y' => 0,'color' => 'rgba(0,255,0,0.4)']],
+            ['text'=>'中','option'=>['position'=>'center', 'offset_x' => 0, 'offset_y' => 0,'color' => 'rgba(0,255,0,0.4)']],
+            ['text'=>'右中','option'=>['position'=>'right_center', 'offset_x' => 0, 'offset_y' => 0,'color' => 'rgba(0,255,0,0.4)']],
+            ['text'=>'左下','option'=>['position'=>'left_down', 'offset_x' => 0, 'offset_y' => 0,'color' => 'rgba(0,0,255,0.4)']],
+            ['text'=>'下','option'=>['position'=>'down', 'offset_x' => 0, 'offset_y' => 0,'color' => 'rgba(0,0,255,0.4)']],
+            ['text'=>'右下','option'=>['position'=>'right_down', 'offset_x' => 0, 'offset_y' => 0,'color' => 'rgba(0,0,255,0.4)']]
+        ];
+        foreach ($pointData as $text)
+        {
+            $source->addText($text['text'],array_merge([
+                'size' => 24,
+                'font' => __DIR__."/../../fonts/msyh.ttf",
+            ],$text['option']));
+        }
+        $out = $source->toPath();
+        var_dump($out);
+        $this->assertIsString($out);
+        $this->assertFileExists($out);
+        $this->assertGreaterThan(0, filesize($out));
+        $this->assertNotEquals(realpath($src), realpath($out));
+    }
+
+    public function testChainEdit()
+    {
+        $src = __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg';
+        $overlay = __DIR__.'/../../cache/images/demo.png';
+
+        if (!file_exists($src) || !file_exists($overlay)) {
+            $this->markTestSkipped('缺少样例图片 src/cache/images/...');
+        }
+        $engine = new ImagickEngine([]);
+        $out = $engine
+            ->openImage($src)
+            ->addText('hello 世界', [
+                'size' => 24,
+                'font' => __DIR__."/../../fonts/msyh.ttf",
+                'color' => 'rgba(0,0,0,0.4)',
+                'position' => 'down',
+                'offset_x' => 80,
+                'offset_y' => 80,
+            ])
+            ->mergeImage($overlay, [
+                'position' => 'center',
+                'width' => 300,
+                'keep_aspect' => true,
+                'offset_x' => 0,
+                'offset_y' => 0,
+            ])
+            ->resize(1000,1000)
+            ->crop(500, 500, 200, 300)
+            ->toPath();
+        $this->assertIsString($out);
+        $this->assertFileExists($out);
+        $this->assertGreaterThan(0, filesize($out));
+        $this->assertNotEquals(realpath($src), realpath($out));
     }
 }
