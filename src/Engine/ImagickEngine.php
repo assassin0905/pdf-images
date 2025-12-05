@@ -339,7 +339,6 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
      * 图片合成 pdf
      * @param array $images
      * @param string|null $savePath
-     * @param string|null $dirPath
      * @return string
      * @throws PdfImagesException
      */
@@ -510,7 +509,7 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
      * 图片合并
      * @param string $overlayPath
      * @param array $options
-     * @return ImagickEngine
+     * @return $this
      */
     public function mergeImage(string $overlayPath, array $options = [])
     {
@@ -579,7 +578,7 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
      * @param int $width
      * @param int|null $height
      * @param bool $keepAspect
-     * @return ImagickEngine
+     * @return $this
      */
     public function resize(int $width, ?int $height = null, bool $keepAspect = true)
     {
@@ -603,6 +602,80 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
 
     }
 
+    /**
+     * 图片锐化
+     * @param float $radius
+     * @param float $sigma
+     * @return $this
+     */
+    public function sharpen(float $radius = 0, float $sigma = 1)
+    {
+        if(empty($this->im)) throw new PdfImagesException("请先调用 openImage() 加载图片");
+        try {
+            $this->im->sharpenImage($radius, $sigma);
+            return $this;
+        }catch (ImagickException $e)
+        {
+            throw new PdfImagesException($e->getMessage());
+        }
+    }
+
+    /**
+     * 图片模糊
+     * @param float $radius
+     * @param float $sigma
+     * @return $this
+     */
+    public function blur(float $radius = 0, float $sigma = 1)
+    {
+        if(empty($this->im)) throw new PdfImagesException("请先调用 openImage() 加载图片");
+        try {
+            $this->im->blurImage($radius, $sigma);
+            return $this;
+        }catch (ImagickException $e)
+        {
+            throw new PdfImagesException($e->getMessage());
+        }
+    }
+
+    /**
+     * 图片翻转
+     * @param string $mode vertical|horizontal
+     * @return $this
+     */
+    public function flip(string $mode = 'vertical')
+    {
+        if(empty($this->im)) throw new PdfImagesException("请先调用 openImage() 加载图片");
+        try {
+            if ($mode === 'horizontal' || $mode === 'h') {
+                $this->im->flopImage(); // 水平翻转
+            } else {
+                $this->im->flipImage(); // 垂直翻转
+            }
+            return $this;
+        }catch (ImagickException $e)
+        {
+            throw new PdfImagesException($e->getMessage());
+        }
+    }
+
+    /**
+     * 图片旋转
+     * @param float $degrees
+     * @param string $background
+     * @return $this
+     */
+    public function rotate(float $degrees, $background = 'transparent')
+    {
+        if(empty($this->im)) throw new PdfImagesException("请先调用 openImage() 加载图片");
+        try {
+            $this->im->rotateImage(new ImagickPixel($background), $degrees);
+            return $this;
+        }catch (ImagickException $e)
+        {
+            throw new PdfImagesException($e->getMessage());
+        }
+    }
 
     /**
      * 计算图片位置

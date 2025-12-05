@@ -222,7 +222,6 @@ class ExampleTest extends AbstractTestCase
             ],$text['option']));
         }
         $out = $source->toPath();
-        var_dump($out);
         $this->assertIsString($out);
         $this->assertFileExists($out);
         $this->assertGreaterThan(0, filesize($out));
@@ -257,6 +256,42 @@ class ExampleTest extends AbstractTestCase
             ])
             ->resize(1000,1000)
             ->crop(500, 500, 200, 300)
+            ->toPath();
+        $this->assertIsString($out);
+        $this->assertFileExists($out);
+        $this->assertGreaterThan(0, filesize($out));
+        $this->assertNotEquals(realpath($src), realpath($out));
+    }
+
+    public function testChainEffects()
+    {
+        $src = __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg';
+        if (!file_exists($src)) {
+            $this->markTestSkipped('缺少样例图片 src/cache/images/...');
+        }
+        $engine = new ImagickEngine([]);
+        $out = $engine
+            ->openImage($src)
+            /**
+             * $radius 控制锐化效果的扩散范围,通常 0.0 到 10.0，值越小：锐化效果更精细，只影响边缘附近的像素 越大 锐化效果更扩散，影响更大范围的像素
+             * $sigma 控制锐化的强度或"锐利度" 通常 0.0 到 10.0,值越小：锐化效果越柔和、轻微,越大 锐化效果越强烈、明显
+             * 给定几个参考区间  (0.5, 1) 轻微、精细的锐化,(2.0, 1) 中等范围的锐化,(5.0, 1) 中等范围的锐化
+             */
+//            ->sharpen(5.0, 1.5) // 锐化
+            /**
+             * $radius 控制模糊效果的采样半径,通常 1.0 到 20.0 之间 值越小：轻微模糊，保持较多细节,越大：强烈模糊，效果更明显
+             * $sigma 控制高斯分布的标准差，通常 0.5 到 10.0 之间 决定模糊的"平滑度",值越小：模糊更集中，边缘相对保留,越大：模糊更平滑、更自然
+             */
+//            ->blur(5, 3) // 高斯模糊
+            /**
+             * $mode  vertical 水平翻转，默认值, horizontal | h 垂直翻转
+             */
+//            ->flip('h') // 翻转
+            /**
+             * $angle 旋转角度
+             * $backgroud 填充背景颜色，默认白色 支持 rgba(255, 0, 0, 0.5), (white,red) 或者 #EFEFEF
+             */
+            ->rotate(45,'#EFEFEF') //旋转
             ->toPath();
         $this->assertIsString($out);
         $this->assertFileExists($out);
