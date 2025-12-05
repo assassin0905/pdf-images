@@ -4,11 +4,15 @@ namespace Wudg\PdfImages\Engine;
 ! defined('BASE_PATH') && define('BASE_PATH', dirname(__DIR__, 1));
 
 /**
- * @method openImage(string $file)
+ *
+ * @method $this openImage(string $file)
+ * @method $this addText(string $text, array $options = [])
+ * @method $this mergeImage(string $overlayPath, array $options = [])
+ * @method $this crop(int $width, int $height, int $x, int $y)
+ * @method $this resize(int $width, ?int $height = null, bool $keepAspect = true)
  * @method toBlod()
  * @method toBase64()
- * @method toPath(string $savePath = null,string $ext = null)
- * @method addText(string $text, array $options = [])
+ * @method toPath(string $savePath = null, string $ext = null)
  */
 abstract class PdfImagesEngine
 {
