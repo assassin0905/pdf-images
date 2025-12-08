@@ -291,6 +291,221 @@ class ExampleTest extends AbstractTestCase
 //        $this->assertGreaterThan(0,filesize($outRotate));
     }
 
+    public function testCoModifyPdf()
+    {
+        $pdfPath = __DIR__.'/../../src/cache/pdf/2025/1203/pdf_462f5502-27cb-484e-bf5f-dcc2e6388176.pdf';
+        $overlay = __DIR__.'/../../cache/images/demo.png';
+        $fontPath = __DIR__.'/../../fonts/msyh.ttf';
+        $data = [
+            [
+                'index' => 1,
+                'position' => [
+                    [
+                        'type' => 'image',
+                        'src' => $overlay,
+                        'x' => 800,
+                        'y' => 1200,
+                        'w' => 80,
+                        'h' => 80
+                    ]
+                ]
+            ],
+            [
+                'index' => 2,
+                'position' => [
+                    [
+                        'type' => 'text',
+                        'text' => '日期:'.date("Y-m-d H:i:s"),
+                        'x' => 160,
+                        'y' => 80,
+                        'font' => $fontPath,
+                        'color' => 'rgba(255,0,0,0.5)',
+                        'size' => 40,
+                        'width' => 100,
+                        'height' => 80
+                    ]
+                ]
+            ],
+            [
+                'index' => 3,
+                'position' => [
+                    [
+                        'type' => 'text',
+                        'text' => '日期:'.date("Y-m-d H:i:s"),
+                        'x' => 500,
+                        'y' => 1190,
+                        'font' => $fontPath,
+                        'color' => '#0000A0',
+                        'size' => 40,
+                        'width' => 100,
+                        'height' => 80
+                    ],
+                    [
+                        'type' => 'image',
+                        'src' => $overlay,
+                        'x' => 800,
+                        'y' => 1200,
+                        'w' => 80,
+                        'h' => 80
+                    ]
+                ]
+            ],
+            [
+                'index' => 4,
+                'position' => [
+                    [
+                        'type' => 'image',
+                        'src' => $overlay,
+                        'x' => 800,
+                        'y' => 1200,
+                        'w' => 80,
+                        'h' => 80
+                    ]
+                ]
+            ],
+            [
+                'index' => 5,
+                'position' => [
+                    [
+                        'type' => 'image',
+                        'src' => $overlay,
+                        'x' => 800,
+                        'y' => 1200,
+                        'w' => 80,
+                        'h' => 80
+                    ]
+                ]
+            ]
+        ];
+        $outH = null;
+        run(function ()use($pdfPath,$data,&$outH) {
+            $engine = new ImagickEngine([]);
+            $outH = $engine->modifyPdf($pdfPath, $data);
+        });
+        $this->assertIsString($outH);
+        $this->assertFileExists($outH);
+        $this->assertGreaterThan(0, filesize($outH));
+    }
+
+    public function testModifyPdf()
+    {
+        $pdfPath = __DIR__.'/../../src/cache/pdf/2025/1203/pdf_462f5502-27cb-484e-bf5f-dcc2e6388176.pdf';
+        $overlay = __DIR__.'/../../cache/images/demo.png';
+        $fontPath = __DIR__.'/../../fonts/msyh.ttf';
+        $data = [
+            [
+                'index' => 1,
+                'position' => [
+                    [
+                        'type' => 'image',
+                        'src' => $overlay,
+                        'x' => 800,
+                        'y' => 1200,
+                        'w' => 80,
+                        'h' => 80
+                    ]
+                ]
+            ],
+            [
+                'index' => 2,
+                'position' => [
+                    [
+                        'type' => 'text',
+                        'text' => '日期:'.date("Y-m-d H:i:s"),
+                        'x' => 160,
+                        'y' => 80,
+                        'font' => $fontPath,
+                        'color' => 'rgba(255,0,0,0.5)',
+                        'size' => 40,
+                        'width' => 100,
+                        'height' => 80
+                    ]
+                ]
+            ],
+            [
+                'index' => 3,
+                'position' => [
+                    [
+                        'type' => 'text',
+                        'text' => '日期:'.date("Y-m-d H:i:s"),
+                        'x' => 500,
+                        'y' => 1190,
+                        'font' => $fontPath,
+                        'color' => '#0000A0',
+                        'size' => 40,
+                        'width' => 100,
+                        'height' => 80
+                    ],
+                    [
+                        'type' => 'image',
+                        'src' => $overlay,
+                        'x' => 800,
+                        'y' => 1200,
+                        'w' => 80,
+                        'h' => 80
+                    ]
+                ]
+            ],
+            [
+                'index' => 4,
+                'position' => [
+                    [
+                        'type' => 'image',
+                        'src' => $overlay,
+                        'x' => 800,
+                        'y' => 1200,
+                        'w' => 80,
+                        'h' => 80
+                    ]
+                ]
+            ],
+            [
+                'index' => 5,
+                'position' => [
+                    [
+                        'type' => 'image',
+                        'src' => $overlay,
+                        'x' => 800,
+                        'y' => 1200,
+                        'w' => 80,
+                        'h' => 80
+                    ]
+                ]
+            ]
+        ];
+        $engine = new ImagickEngine([]);
+        $outH = $engine->modifyPdf($pdfPath, $data);
+        var_dump($outH);
+        $this->assertIsString($outH);
+        $this->assertFileExists($outH);
+        $this->assertGreaterThan(0, filesize($outH));
+    }
+
+    public function testCreatePhotoWall()
+    {
+        $images = [
+            __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/1_535cacc6-3804-4134-93a5-c41b42f72a7e.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/2_7271b539-ce09-4356-89fd-20dede251c93.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/3_3f60489d-b606-42ec-9cd6-0bec79eb831c.jpg',
+            __DIR__.'/../../src/cache/images/2025/1203/4_3503f27f-5766-416b-a3dd-6c32f3dd929f.jpg',
+        ];
+        $engine = new ImagickEngine([]);
+
+        $outH = $engine->createPhotoWall($images,[
+            'width' => 150,
+            'height' => 150,
+            'cols' => 2,
+            'gap' => 5,
+            'gap_color' => 'white',
+            'angle' => 30,
+        ])->toPath();
+        var_dump($outH);
+        $this->assertIsString($outH);
+        $this->assertFileExists($outH);
+        $this->assertGreaterThan(0, filesize($outH));
+    }
+
     public function testCombineImages()
     {
         $images = [

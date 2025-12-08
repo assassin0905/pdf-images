@@ -97,12 +97,22 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
         {
             $this->images_save_path = $this->config['images_save_path'];
         }
+        if(!empty($this->config['pdf_save_path']))
+        {
+            $this->pdf_save_path = $this->config['pdf_save_path'];
+        }
+        /**
+         * 最大携程数量
+         */
+        if(!empty($this->config['parallel_num']))
+        {
+            $this->maxParallel = (int)$this->config['parallel_num'];
+        }
 
         if(!empty($this->config['ext']))
         {
             $this->ext = $this->config['ext'];
         }
-
     }
 
     public function pdfToImages(string $pdfPath, string $savePath = null, array $options = []): array
@@ -110,7 +120,7 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
         if($savePath)
         {
             $this->images_save_path = $savePath;
-        }else{
+        }elseif(!empty($this->config['save_img_path'])){
             $this->images_save_path = $this->config['save_img_path'];
         }
         $this->mkdirPath($this->images_save_path);
@@ -363,7 +373,7 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
             }
 
             $pdf->readImages($imagesData);
-            $savePdfPath = $this->pdf_save_path.DIRECTORY_SEPARATOR."pdf_".Str::uuid()->toString().".pdf";
+            $savePdfPath = $this->pdf_save_path."pdf_".Str::uuid()->toString().".pdf";
             $res = $pdf->writeImages($savePdfPath, true);
             $pdf->clear();
             $pdf->destroy();
@@ -967,5 +977,257 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
         } catch (ImagickException $e) {
             throw new PdfImagesException($e->getMessage());
         }
+    }
+
+    /**
+     * 图片合成照片墙
+     * @param array $images 图片路径数组
+     * @param array $options 配置选项
+     *  - width: 缩略图宽度
+     *  - height: 缩略图高度
+     *  - cols: 每行图片张数
+     *  - gap: 图片间隙
+     *  - gap_color: 间隙背景色 (default: transparent)
+     *  - angle: 旋转角度 (default: 0)
+     * @return $this
+     * @throws PdfImagesException
+     */
+    public function createPhotoWall(array $images, array $options = []): self
+    {
+        if (empty($images)) {
+            throw new PdfImagesException("图片数组不能为空");
+        }
+
+        $thumbW = $options['width'] ?? 200;
+        $thumbH = $options['height'] ?? 200;
+        $cols = $options['cols'] ?? 3;
+        $gap = $options['gap'] ?? 10;
+        $gapColor = $options['gap_color'] ?? 'transparent';
+        $angle = $options['angle'] ?? 0;
+
+        try {
+            $processedImages = [];
+            $maxCellW = 0;
+            $maxCellH = 0;
+
+            foreach ($images as $file) {
+                if (!file_exists($file)) continue;
+
+                $img = new Imagick($file);
+                // 裁剪并缩放到指定大小
+                $img->cropThumbnailImage($thumbW, $thumbH);
+
+                // 旋转
+                if ($angle != 0) {
+                    $img->rotateImage(new ImagickPixel('transparent'), $angle);
+                }
+
+                $w = $img->getImageWidth();
+                $h = $img->getImageHeight();
+
+                if ($w > $maxCellW) $maxCellW = $w;
+                if ($h > $maxCellH) $maxCellH = $h;
+
+                $processedImages[] = $img;
+            }
+
+            if (empty($processedImages)) {
+                throw new PdfImagesException("没有有效的图片");
+            }
+
+            $count = count($processedImages);
+            $rows = (int)ceil($count / $cols);
+
+            // 计算画布大小
+            $canvasH = ($rows * $maxCellH) + (($rows - 1) * $gap);
+
+            // 修正：如果计算出的宽高小于单个格子（例如 cols > count），应该按实际占用来？
+            // 不，照片墙通常是固定宽度的容器。这里我们根据 cols 撑开。
+            // 如果只有 1 张图，cols=3，画布还是会宽。
+            // 修正：如果是为了生成一张图，通常希望画布紧凑。
+            // 如果 count < cols，实际列数是 count。
+            $actualCols = min($count, $cols);
+            $canvasW = ($actualCols * $maxCellW) + (($actualCols - 1) * $gap);
+
+
+            $canvas = new Imagick();
+            $canvas->newImage($canvasW, $canvasH, new ImagickPixel($gapColor));
+            $canvas->setImageFormat('png'); // 默认使用 png 以支持透明
+
+            $col = 0;
+            $row = 0;
+
+            foreach ($processedImages as $img) {
+                $x = $col * ($maxCellW + $gap);
+                $y = $row * ($maxCellH + $gap);
+
+                // 居中放置在格子中
+                $iw = $img->getImageWidth();
+                $ih = $img->getImageHeight();
+                $offX = ($maxCellW - $iw) / 2;
+                $offY = ($maxCellH - $ih) / 2;
+
+                $canvas->compositeImage($img, Imagick::COMPOSITE_DEFAULT, (int)($x + $offX), (int)($y + $offY));
+
+                $img->clear();
+                $img->destroy();
+
+                $col++;
+                if ($col >= $cols) {
+                    $col = 0;
+                    $row++;
+                }
+            }
+
+            $this->im = $canvas;
+            return $this;
+
+        } catch (ImagickException $e) {
+            throw new PdfImagesException($e->getMessage());
+        }
+    }
+
+    /**
+     * 指定位置合成图片或文字到 PDF
+     * @param string $pdfPath PDF 路径
+     * @param array $data 配置数组
+     * [
+     *   {
+     *      'index' => 1, // 页码
+     *      'position' => [
+     *          ['type'=>'text', 'text'=>'内容', 'x'=>10, 'y'=>10, 'size'=>12, 'color'=>'red', 'font'=>'msyh.ttf'],
+     *          ['type'=>'image', 'src'=>'./logo.png', 'x'=>100, 'y'=>100, 'w'=>50, 'h'=>50, 'angle'=>0]
+     *      ]
+     *   }
+     * ]
+     * @param string|null $savePath 保存路径
+     * @return string
+     * @throws PdfImagesException
+     */
+    public function modifyPdf(string $pdfPath, array $data, string $savePath = null): string
+    {
+        if (!file_exists($pdfPath)) {
+            throw new PdfImagesException("PDF文件不存在");
+        }
+        // 确定保存路径
+        if (!empty($savePath)) {
+            $this->pdf_save_path = $savePath;
+        }
+        $this->mkdirPath($this->pdf_save_path);
+        $parallel = null;
+        if(Coroutine::inCoroutine())
+        {
+            $parallel = new Parallel($this->maxParallel);
+        }
+        try {
+            $processImages = $this->pdfToImages($pdfPath);
+            foreach ($data as $pageConfig) {
+                $pageIndex = ($pageConfig['index'] ?? 1) - 1;
+                if(!isset($processImages[$pageIndex]))  continue;
+
+                $positions = $pageConfig['position'] ?? [];
+                $handleImgPath = $processImages[$pageIndex];
+                if($parallel)
+                {
+                    $parallel->add(function()use($positions,$handleImgPath,$pageIndex,$processImages){
+                        $handleImage = new Imagick($handleImgPath);
+                        foreach ($positions as $item) {
+                            $type = $item['type'] ?? '';
+                            $x = (int)($item['x'] ?? 0);
+                            $y = (int)($item['y'] ?? 0);
+                            if ($type === 'text') {
+                                $this->drawTextItem($handleImage, $item, $x, $y);
+                            } elseif ($type === 'images' || $type === 'image') {
+                                $this->drawImageItem($handleImage, $item, $x, $y);
+                            }
+                        }
+                        $saveHandleImg = $this->pdf_save_path."current_".$pageIndex.'_'.Str::uuid().".jpeg";
+                        $handleImage->writeImage($saveHandleImg);
+                        $handleImage->clear();
+                        $handleImage->destroy();
+                        @unlink($processImages[$pageIndex]);
+                        return [$pageIndex, $saveHandleImg];
+                    });
+                }else{
+                    $handleImage = new Imagick($handleImgPath);
+                    foreach ($positions as $item) {
+                        $type = $item['type'] ?? '';
+                        $x = (int)($item['x'] ?? 0);
+                        $y = (int)($item['y'] ?? 0);
+                        if ($type === 'text') {
+                            $this->drawTextItem($handleImage, $item, $x, $y);
+                        } elseif ($type === 'images' || $type === 'image') {
+                            $this->drawImageItem($handleImage, $item, $x, $y);
+                        }
+                    }
+                    $saveHandleImg = $this->pdf_save_path."current_".$pageIndex.'_'.Str::uuid().".jpeg";
+                    $handleImage->writeImage($saveHandleImg);
+                    $handleImage->clear();
+                    $handleImage->destroy();
+                    @unlink($processImages[$pageIndex]);
+                    $processImages[$pageIndex] =$saveHandleImg;
+                }
+            }
+            if($parallel)
+            {
+                try{
+                    $processCoImages = $parallel->wait();
+                    foreach($processCoImages as $handleImg)
+                    {
+                        list($index,$handleImgPath) = $handleImg;
+                        $processImages[$index] =$handleImgPath;
+                    }
+                } catch(ParallelExecutionException $e){
+                    throw new PdfImagesException($e->getMessage());
+                }
+            }
+            $savePath = $this->imagesToPdf($processImages,$this->pdf_save_path);
+            foreach ($processImages as $filePath) @unlink($filePath);
+            return $savePath;
+        } catch (ImagickException $e) {
+            throw new PdfImagesException($e->getMessage());
+        }
+    }
+
+    protected function drawTextItem(Imagick $im, array $item, int $x, int $y)
+    {
+        $text = $item['text'] ?? ($item['content'] ?? '');
+        if ($text === '') return;
+
+        $draw = new ImagickDraw();
+        $color = $item['color'] ?? 'black';
+        $font = $item['font'] ?? null;
+        $size = $item['size'] ?? 12;
+        $width = $item['width'] ?? 200;
+        $height = $item['height'] ?? 80;
+        if ($width > 0 && $height > 0) {
+            $draw->rectangle($x, $y, $x + $width, $y + $height);
+        }
+        $draw->setFillColor(new ImagickPixel($color));
+        $draw->setFontSize($size);
+        if ($font && file_exists($font)) {
+            $draw->setFont($font);
+        }
+        $draw->setTextAntialias(true);
+        $im->annotateImage($draw, $x, $y, 0, $text);
+    }
+
+    protected function drawImageItem(Imagick $im, array $item, int $x, int $y)
+    {
+        $src = $item['src'] ?? '';
+        if (!file_exists($src)) throw new PdfImagesException("附件{$src}不存在");
+        $overlay = new Imagick($src);
+        $width = $item['width'] ?? 0;
+        $height = $item['height'] ?? 0;
+        $angle = $item['angle'] ?? 0;
+        if ($width > 0 && $height > 0) {
+            $overlay->scaleImage($width, $height);
+        }
+        if ($angle != 0) {
+            $overlay->rotateImage(new ImagickPixel('transparent'), $angle);
+        }
+        $im->compositeImage($overlay, Imagick::COMPOSITE_DEFAULT, $x, $y);
+        $overlay->clear();
+        $overlay->destroy();
     }
 }

@@ -289,8 +289,75 @@ $engine = new ImagickEngine([]);
 $engine->combineImages($images, 'h', 20, 'blue')->toPath();
 
 ```
+### 多张图合并成一张照片墙
+```
+$images = [
+    __DIR__.'/../../src/cache/images/2025/1203/0_a2a52f0e-6ff4-4338-b48c-9c6739832bf8.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/1_535cacc6-3804-4134-93a5-c41b42f72a7e.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/2_7271b539-ce09-4356-89fd-20dede251c93.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/3_3f60489d-b606-42ec-9cd6-0bec79eb831c.jpg',
+    __DIR__.'/../../src/cache/images/2025/1203/4_3503f27f-5766-416b-a3dd-6c32f3dd929f.jpg',
+];
+$engine = new ImagickEngine([]);
 
-
+/**
+ *
+ * $images            : array 图片数组
+ * $options.width     : int 缩略宽度
+ * $options.height    : int 缩略高度
+ * $options.cols      : int 图片摆放列数 
+ * $options.gap       : int 每张图距离间隙 
+ * $options.gap_color : string 间隙图片背景色 
+ * $options.angle     : int 每张图旋转角度 
+ */
+$outH = $engine->createPhotoWall($images,[
+    'width' => 150,
+    'height' => 150,
+    'cols' => 2,
+    'gap' => 5,
+    'gap_color' => 'white',
+    'angle' => 30,
+])->toPath();
+```
+### PDF 合成图片和文字内容，此方法在携程环境下效率很高，建议在携程环境使用
+```
+$data = [
+    [
+        'index' => 1, //页码
+        'position' => [
+            [
+                'type' => 'image', // 写入类型，image（图片） | text(文字)
+                'x' => 800,// 距离当前页数 x 轴距离
+                'y' => 1200,// 距离当前页数 y 轴距离
+                'width' => 80, // 图片宽度
+                'height' => 80, // 图片高度
+                'src' => $overlay, // 图片路径 type=image 有效 
+            ]
+        ]
+    ],
+    [
+        'index' => 2,
+        'position' => [
+            [
+                'type' => 'text',  // 写入类型，image（图片） | text(文字)
+                'text' => '日期:'.date("Y-m-d H:i:s"), // 文字内容 type=text 有效 
+                'font' => $fontPath,  // 字体路径 type=text 有效 
+                'color' => 'rgba(255,0,0,0.5)',  // 字体颜色 type=text 有效 
+                'x' => 160, // 距离当前页数 x 轴距离
+                'y' => 80, // 距离当前页数 y 轴距离
+                'size' => 40,   // 字号大小 type=text 有效 
+                'width' => 100, // 区域宽度
+                'height' => 80 // 区域高度
+            ]
+        ]
+    ]
+];
+$pdfPath = __DIR__.'/../../src/cache/pdf/2025/1203/pdf_462f5502-27cb-484e-bf5f-dcc2e6388176.pdf';
+$overlay = __DIR__.'/../../cache/images/demo.png';
+$fontPath = __DIR__.'/../../fonts/msyh.ttf';
+$engine = new ImagickEngine([]);
+$outH = $engine->modifyPdf($pdfPath, $data);
+```
 
 ## 实际效果
 ### 测试 5 页 pdf 转换图片fpm和携程下差距
@@ -316,7 +383,6 @@ $engine->combineImages($images, 'h', 20, 'blue')->toPath();
 ./vendor/bin/phpunit -c phpunit.xml --filter 'HyperfTest\\Cases\\ExampleTest::testCoImgToPdf'
 
 ```
-
 ### 图片操作
 ```
 ### 测试处理图片，文字水印 & 合并图片 & 缩放图片 & 裁剪图片 最终保存
@@ -337,5 +403,17 @@ $engine->combineImages($images, 'h', 20, 'blue')->toPath();
 
 # Time: 00:26.889, Memory: 10.00 MB
 ./vendor/bin/phpunit -c phpunit.xml --filter 'HyperfTest\\Cases\\ExampleTest::testImagesToGif'
+
+```
+### pdf 指定页数打点或者合成图片，5页 pdf 在每页做图片和文字合成
+```
+# fpm 模式下效率大增
+# Time: 00:28.361, Memory: 10.00 MB
+./vendor/bin/phpunit -c phpunit.xml --filter 'HyperfTest\\Cases\\ExampleTest::testModifyPdf'
+
+
+# co 模式下效率大增
+# Time: 00:05.969, Memory: 10.00 M
+./vendor/bin/phpunit -c phpunit.xml --filter 'HyperfTest\\Cases\\ExampleTest::testCoModifyPdf'
 
 ```
