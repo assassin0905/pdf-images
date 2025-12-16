@@ -93,13 +93,13 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
         }
 
 
-        if(!empty($this->config['images_save_path']))
+        if(!empty($this->config['save_img_path']))
         {
-            $this->images_save_path = $this->config['images_save_path'];
+            $this->images_save_path = $this->config['save_img_path'];
         }
-        if(!empty($this->config['pdf_save_path']))
+        if(!empty($this->config['save_pdf_path']))
         {
-            $this->pdf_save_path = $this->config['pdf_save_path'];
+            $this->pdf_save_path = $this->config['save_pdf_path'];
         }
         /**
          * 最大携程数量

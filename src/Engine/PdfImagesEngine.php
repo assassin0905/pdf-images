@@ -13,11 +13,13 @@ use Imagick;
  * @method $this blur(float $radius = 0, float $sigma = 1):$this
  * @method $this flip(string $mode = 'vertical'):$this
  * @method $this rotate(float $degrees):$this
+ * @method $this createPhotoWall(array $images, array $options = []):$this
  * @method Imagick getIm():Imagick
  * @method $this sharpen(float $radius = 0, float $sigma = 1):$this
  * @method $this combineImages(array $images, string $direction = 'v', int $spacing = 0, string $background_color = 'white'):$this
  * @method $this imagesToGif(array $images, int $delay = 20, string $transition = null, int $transitionSteps = 10):$this
  * @method toBlod()
+ * @method modifyPdf(string $pdfPath, array $data, string $savePath = null):string
  * @method toBase64()
  * @method toPath(string $savePath = null, string $ext = null)
  */
