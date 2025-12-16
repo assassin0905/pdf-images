@@ -217,8 +217,8 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
             $page = $im->getImage();
             $page->setImageFormat($this->ext);
             $page->setImageDepth(8);// 每通道 8bit，总 24-bit color
-            $page->setType(Imagick::IMGTYPE_TRUECOLOR); // 标记为真彩色
-            $page->setImageColorspace(Imagick::COLORSPACE_RGB);// 设置为 RGB 色彩空间
+//            $page->setType(Imagick::IMGTYPE_TRUECOLOR); // 标记为真彩色
+//            $page->setImageColorspace(Imagick::COLORSPACE_RGB);// 设置为 RGB 色彩空间
             $page->scaleImage($this->width,$calcH,true); //缩放图片
             switch ($this->ext)
             {
