@@ -216,9 +216,13 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
             $calcH = bcdiv(bcmul($this->width , $height),$width);
             $page = $im->getImage();
             $page->setImageFormat($this->ext);
+            $page->flattenImages(); //合并图层
+            $page->setImageBackgroundColor('white');
+            $page->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE); // 移除透明度
+            $page->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN); // 合并图层
             $page->setImageDepth(8);// 每通道 8bit，总 24-bit color
-//            $page->setType(Imagick::IMGTYPE_TRUECOLOR); // 标记为真彩色
-//            $page->setImageColorspace(Imagick::COLORSPACE_RGB);// 设置为 RGB 色彩空间
+            $page->setType(Imagick::IMGTYPE_TRUECOLOR); // 标记为真彩色
+            $page->setImageColorspace(Imagick::COLORSPACE_RGB);// 设置为 RGB 色彩空间
             $page->scaleImage($this->width,$calcH,true); //缩放图片
             switch ($this->ext)
             {
@@ -231,10 +235,7 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
                     break;
             }
             $page->setImageCompression($imgCompression);
-            $page->flattenImages(); //合并图层
-            $page->setImageBackgroundColor('white');
-            $page->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE); // 移除透明度
-            $page->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN); // 合并图层
+
             $page->setImageCompressionQuality($this->compression_quality);
             $fileName = $pageNum.'_'.Str::uuid()->toString() . '.' . $this->ext;
 
