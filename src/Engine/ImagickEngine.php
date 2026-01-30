@@ -211,23 +211,30 @@ class ImagickEngine extends PdfImagesEngine implements HandleInterface
         try
         {
             $imgLocalPath = null;
+            $im->setResolution($this->dpi, $this->dpi);
             $im->readImage($pdfPath."[{$pageNum}]");
             list($width,$height) = [$im->getImageWidth(),$im->getImageHeight()];
             $calcH = bcdiv(bcmul($this->width , $height),$width);
             $page = $im->getImage();
             $page->setImageFormat($this->ext);
-            $page->flattenImages(); //合并图层
-            $page->setImageBackgroundColor('white');
-            $page->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE); // 移除透明度
-            $page->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN); // 合并图层
-            $page->setImageDepth(8);// 每通道 8bit，总 24-bit color
-            $page->setType(Imagick::IMGTYPE_TRUECOLOR); // 标记为真彩色
-            $page->setImageColorspace(Imagick::COLORSPACE_RGB);// 设置为 RGB 色彩空间
+            $ext = strtolower($this->ext);
+            if ($ext === 'jpg' || $ext === 'jpeg') {
+                $page->setImageBackgroundColor('white');
+                $page = $page->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
+                $page->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+            }
+            if (method_exists($page, 'transformImageColorspace')) {
+                $page->transformImageColorspace(Imagick::COLORSPACE_SRGB);
+            } else {
+                $page->setImageColorspace(Imagick::COLORSPACE_RGB);
+            }
+            $page->setImageDepth(8);
+            $page->setType(Imagick::IMGTYPE_TRUECOLOR);
             $page->scaleImage($this->width,$calcH,true); //缩放图片
             switch ($this->ext)
             {
                 case 'png':
-                    $imgCompression = Imagick::INTERLACE_PNG;
+                    $imgCompression = Imagick::COMPRESSION_UNDEFINED;
                     break;
                 case 'jpeg':
                 default:
